@@ -4,14 +4,14 @@ import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.media.audiofx.AudioEffect;
-import android.support.annotation.NonNull;
-import android.support.v4.util.SparseArrayCompat;
+import android.os.Build;
 import android.text.TextUtils;
 import android.util.Log;
-import android.util.SparseArray;
 
 import java.io.File;
+import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.Map;
 
 import static com.wy.sofix.SoFix.TAG;
 
@@ -70,8 +70,8 @@ public class ApplicationInfoCompat {
     public static PackageInfo getPackageInfo(Context context) {
         PackageInfo packageInfo = getPackageInfoFromCodePath(context);
         if (packageInfo == null) {
-            //package manager has died
             packageInfo = getPackageInfoFromPM(context);
+            //may null when throw exception(package manager has died)
         }
         return packageInfo;
     }
@@ -87,19 +87,69 @@ public class ApplicationInfoCompat {
         return applicationInfo;
     }
 
+
     /**
+     * get default nativeLibraryDir from ApplicationInfo
+     *
      * @param context
-     * @return the path so file stored <br/>
+     * @return path so file stored <br/>
      * rg:<br/>
-     * 1. <= 4.0  /data/data/<package name>/lib
-     * 2. >= 4.1  /data/app-lib/[package-name]-n
+     * 1. >= 4.0  /data/data/<[package-name]/lib    <br/>
+     * 2. >= 4.1  /data/app-lib/[package-name]-n    <br/>
+     * 3. >= 6.0  /data/app/[package-name]-n/lib/[arch]
      */
     public static File getNativeLibraryDir(Context context) {
         ApplicationInfo info = getApplicationInfo(context);
         String nativeLibraryDir = info.nativeLibraryDir;
         if (TextUtils.isEmpty(nativeLibraryDir)) {
-            nativeLibraryDir = info.dataDir + "/lib";
+            int sdkInt = Build.VERSION.SDK_INT;
+            if (sdkInt < Build.VERSION_CODES.JELLY_BEAN) {
+                nativeLibraryDir = info.dataDir + "/lib";
+            } else if (sdkInt < Build.VERSION_CODES.M) {
+                nativeLibraryDir = "/data/app-lib/" + deriveCodePathName(info.sourceDir);
+            } else {
+                HashMap<String, String> instructionMap = getInstructionSetMap();
+                try {
+                    Field primaryCpuAbiField = ApplicationInfo.class.getField("ApplicationInfo");
+                    nativeLibraryDir = "/data/app/" + deriveCodePathName(info.sourceDir) + "/" + instructionMap.get(primaryCpuAbiField.get(info));
+                } catch (Exception e) {
+                    Log.w(TAG, "getNativeLibraryDir: ", e);
+                }
+            }
         }
-        return new File(nativeLibraryDir);
+        return TextUtils.isEmpty(nativeLibraryDir) ? null : new File(nativeLibraryDir);
+    }
+
+    private static HashMap<String, String> getInstructionSetMap() {
+        HashMap<String, String> map = new HashMap<String, String>(16);
+        map.put("armeabi", "arm");
+        map.put("armeabi-v7a", "arm");
+        map.put("mips", "mips");
+        map.put("mips64", "mips64");
+        map.put("x86", "x86");
+        map.put("x86_64", "x86_64");
+        map.put("arm64-v8a", "arm64");
+        return map;
+    }
+
+    /**
+     * Utility method that returns the relative package path with respect
+     * to the installation directory. Like say for /data/data/com.test-1.apk
+     * string com.test-1 is returned.
+     */
+    private static String deriveCodePathName(String codePath) {
+        if (codePath == null) {
+            return null;
+        }
+        final File codeFile = new File(codePath);
+        final String name = codeFile.getName();
+        if (codeFile.isDirectory()) {
+            return name;
+        } else if (name.endsWith(".apk") || name.endsWith(".tmp")) {
+            final int lastDot = name.lastIndexOf('.');
+            return name.substring(0, lastDot);
+        } else {
+            return null;
+        }
     }
 }
