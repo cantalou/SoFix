@@ -91,15 +91,14 @@ public class ApplicationInfoCompat {
     /**
      * get default nativeLibraryDir from ApplicationInfo
      *
-     * @param context
+     * @param info
      * @return path so file stored <br/>
      * rg:<br/>
      * 1. >= 4.0  /data/data/<[package-name]/lib    <br/>
      * 2. >= 4.1  /data/app-lib/[package-name]-n    <br/>
      * 3. >= 6.0  /data/app/[package-name]-n/lib/[arch]
      */
-    public static File getNativeLibraryDir(Context context) {
-        ApplicationInfo info = getApplicationInfo(context);
+    public static File getNativeLibraryDir(ApplicationInfo info) {
         String nativeLibraryDir = info.nativeLibraryDir;
         if (TextUtils.isEmpty(nativeLibraryDir)) {
             int sdkInt = Build.VERSION.SDK_INT;
@@ -110,14 +109,23 @@ public class ApplicationInfoCompat {
             } else {
                 HashMap<String, String> instructionMap = getInstructionSetMap();
                 try {
-                    Field primaryCpuAbiField = ApplicationInfo.class.getField("ApplicationInfo");
-                    nativeLibraryDir = "/data/app/" + deriveCodePathName(info.sourceDir) + "/" + instructionMap.get(primaryCpuAbiField.get(info));
+                    nativeLibraryDir = "/data/app/" + deriveCodePathName(info.sourceDir) + "/" + instructionMap.get(getPrimaryCpuAbi(info));
                 } catch (Exception e) {
                     Log.w(TAG, "getNativeLibraryDir: ", e);
                 }
             }
         }
         return TextUtils.isEmpty(nativeLibraryDir) ? null : new File(nativeLibraryDir);
+    }
+
+    public static String getPrimaryCpuAbi(ApplicationInfo info) {
+        try {
+            Field primaryCpuAbiField = ApplicationInfo.class.getField("primaryCpuAbi");
+            return (String) primaryCpuAbiField.get(info);
+        } catch (Exception e) {
+            Log.e(TAG, "getPrimaryCpuAbi: get 'primaryCpuAbi' from " + info + " error", e);
+        }
+        return "";
     }
 
     private static HashMap<String, String> getInstructionSetMap() {

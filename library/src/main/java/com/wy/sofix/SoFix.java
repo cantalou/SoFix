@@ -3,12 +3,9 @@ package com.wy.sofix;
 import android.app.Application;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageManager;
 import android.os.Build;
-import android.support.annotation.NonNull;
 import android.text.TextUtils;
 import android.util.Log;
-import android.widget.SimpleCursorAdapter;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -57,7 +54,7 @@ public class SoFix {
     }
 
     /**
-     * Load fo file from "soLoader“ and reload if need
+     * Load fo file from "soLoader" and reload if need
      *
      * @param libName  the name of the library
      * @param soLoader load so file with original caller classLoader
@@ -107,12 +104,12 @@ public class SoFix {
         ArrayList<String> soFileNames = new ArrayList<>();
         soFileNames.add(soFileName);
 
-        ClassLoader cl = soLoader.getClass().getClassLoader();
-        File nativeLibraryDir = pluginPackage.getPluginLibPath();
-        if (cl instanceof HostPluginClassLoader) {
-            cl = ((HostPluginClassLoader) cl).getProxyClassLoader();
-            nativeLibraryDir = getNativeLibraryDir(app);
-        }
+        ApplicationInfo applicationInfo = ApplicationInfoCompat.getApplicationInfo(context);
+
+        File nativeLibraryDir = ApplicationInfoCompat.getNativeLibraryDir(applicationInfo);
+
+        ClassLoader loader = soLoader.getClass()
+                                     .getClassLoader();
 
         File apkFile = new File(pluginPackage.getPluginPath());
 
@@ -303,7 +300,6 @@ public class SoFix {
     private static Object getPathList(ClassLoader cl) {
         return RefInvoker.getField(cl, BaseDexClassLoader.class, "pathList");
     }
-
 
 
 }
