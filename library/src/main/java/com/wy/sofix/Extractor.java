@@ -11,6 +11,8 @@ import java.util.ArrayList;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import static com.wy.sofix.ApplicationInfoCompat.getVersionCode;
+
 /*
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -44,29 +46,26 @@ public class Extractor {
      * @param force            force retry extract so from apk fil
      * @return return new newNativeLibraryDir that so file installed if nativeLibraryDir could
      */
-    public static File extract(Context context, File apkFile, String arch, File nativeLibraryDir, ArrayList<String> soFileNames, boolean force) throws IOException {
+    public static void extract(Context context, File apkFile, String arch, File nativeLibraryDir, ArrayList<String> soFileNames, boolean force) throws IOException {
+
+        if (context == null) {
+            throw new NullPointerException("param context was null");
+        }
 
         if (apkFile == null) {
-            throw new NullPointerException("Param apkFile was null");
+            throw new NullPointerException("param apkFile was null");
         }
 
         if (!apkFile.exists()) {
-            throw new FileNotFoundException("File " + apkFile + " does not exist");
+            throw new FileNotFoundException("file " + apkFile + " does not exist");
         }
 
         if (!apkFile.canRead()) {
-            throw new FileNotFoundException("Param apiFile was null");
+            throw new FileNotFoundException("param apiFile was null");
         }
 
         if (TextUtils.isEmpty(arch)) {
-            throw new IllegalArgumentException("Param arch can not be empty");
-        }
-
-
-        File bakNativeLibraryDir = nativeLibraryDir;
-        if (!nativeLibraryDir.exists() || !nativeLibraryDir.canWrite() || !nativeLibraryDir.canRead()) {
-            bakNativeLibraryDir = context.getDir("lib_bak_" + getVersionCode(context), Context.MODE_PRIVATE);
-            bakNativeLibraryDir.mkdirs();
+            throw new IllegalArgumentException("param arch can not be empty");
         }
 
         ZipFile apk = null;
@@ -91,7 +90,7 @@ public class Extractor {
 
                 bakInstalledSoFile.delete();
                 int times = 0;
-                while (times++ < ) {
+                while (times++ <) {
                     boolean result = copy(apk.getInputStream(zipEntry), bakInstalledSoFile);
                     if (result) {
                         break;
