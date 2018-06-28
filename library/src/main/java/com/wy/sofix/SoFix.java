@@ -194,39 +194,7 @@ public class SoFix {
     }
 
 
-    private static boolean copy(InputStream is, File out) throws IOException {
-        FileOutputStream fileOutputStream = new FileOutputStream(out);
-        BufferedOutputStream bos = new BufferedOutputStream(fileOutputStream, 1024 * 16);
-        BufferedInputStream bis = new BufferedInputStream(is);
-        try {
-            byte[] buf = new byte[1024 * 16];
-            int len;
-            while ((len = bis.read(buf)) != -1) {
-                bos.write(buf, 0, len);
-            }
-            bos.flush();
-            fileOutputStream.getFD()
-                            .sync();
-        } catch (Throwable e) {
-            LogUtil.log(e);
-            return false;
-        } finally {
-            close(bis, bos);
-        }
-        return true;
-    }
 
-    private static void close(Closeable... closeables) {
-        for (Closeable closeable : closeables) {
-            if (closeable != null) {
-                try {
-                    closeable.close();
-                } catch (IOException e) {
-                    // ignore
-                }
-            }
-        }
-    }
 
 
     /**

@@ -4,14 +4,17 @@ import android.content.Context;
 import android.text.TextUtils;
 import android.util.Log;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-
-import static com.wy.sofix.ApplicationInfoCompat.getVersionCode;
 
 /*
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
@@ -34,9 +37,9 @@ public class Extractor {
     private static final String TAG = "SoFix";
 
     /**
-     * The max times of so extracted error attempts
+     * The max times for so extracted error attempts
      */
-    public static int MAX_RETRY_TIME = 2;
+    public static int MAX_RETRY_TIME = 3;
 
     /**
      * @param apkFile          apk file path where the so extract from
@@ -68,38 +71,34 @@ public class Extractor {
             throw new IllegalArgumentException("param arch can not be empty");
         }
 
+        int times = MAX_RETRY_TIME;
+        while (times-- >= 0) {
+            try {
+                extract(apkFile, arch, nativeLibraryDir, soFileNames, force);
+            } catch (IOException e) {
+                Log.w(TAG, "extract: ", e);
+                if (times <= 0) {
+                    throw e;
+                }
+            }
+        }
+
+    }
+
+    private static void extract(File apkFile, String arch, File nativeLibraryDir, ArrayList<String> soFileNames, boolean force) throws IOException {
         ZipFile apk = null;
         try {
             apk = new ZipFile(apkFile);
             for (String soFileName : soFileNames) {
                 String entryPath = "lib" + File.separator + arch + File.separator + soFileName;
                 ZipEntry zipEntry = apk.getEntry(entryPath);
-                File installedSoFile = new File(nativeLibraryDir, soFileName);
-                long soFileSize = zipEntry.getSize();
-
-                LogUtil.log(StringUtils.fileToString(installedSoFile) + ", zipEntry.getSize " + soFileSize);
-                if (!force && installedSoFile.exists() && installedSoFile.length() == soFileSize && installedSoFile.canRead()) {
+                File bakInstalledSoFile = new File(nativeLibraryDir, soFileName);
+                if (!force && bakInstalledSoFile.exists() && bakInstalledSoFile.canRead() && bakInstalledSoFile.length() == zipEntry.getSize()) {
                     continue;
                 }
-
-                File bakInstalledSoFile = new File(bakNativeLibraryDir, soFileName);
-                LogUtil.log(StringUtils.fileToString(bakInstalledSoFile));
-                if (!force && bakInstalledSoFile.exists() && bakInstalledSoFile.length() == soFileSize) {
-                    continue;
-                }
-
                 bakInstalledSoFile.delete();
-                int times = 0;
-                while (times++ <) {
-                    boolean result = copy(apk.getInputStream(zipEntry), bakInstalledSoFile);
-                    if (result) {
-                        break;
-                    }
-                }
-                LogUtil.log("After copy times" + times + "," + StringUtils.fileToString(bakInstalledSoFile) + ", length " + bakInstalledSoFile.length());
+                copy(apk.getInputStream(zipEntry), bakInstalledSoFile);
             }
-        } catch (IOException e) {
-            LogUtil.log(e);
         } finally {
             try {
                 apk.close();
@@ -107,6 +106,36 @@ public class Extractor {
                 //ignore
             }
         }
-        return bakNativeLibraryDir != nativeLibraryDir ? bakNativeLibraryDir : null;
     }
+
+    private static void copy(InputStream is, File out) throws IOException {
+        FileOutputStream fileOutputStream = new FileOutputStream(out);
+        BufferedOutputStream bos = new BufferedOutputStream(fileOutputStream, 1024 * 16);
+        BufferedInputStream bis = new BufferedInputStream(is);
+        try {
+            byte[] buf = new byte[1024 * 16];
+            int len;
+            while ((len = bis.read(buf)) != -1) {
+                bos.write(buf, 0, len);
+            }
+            bos.flush();
+            fileOutputStream.getFD()
+                            .sync();
+        } finally {
+            closeSilent(bis, bos);
+        }
+    }
+
+    private static void closeSilent(Closeable... closeables) {
+        for (Closeable closeable : closeables) {
+            if (closeable != null) {
+                try {
+                    closeable.close();
+                } catch (IOException e) {
+                    // ignore
+                }
+            }
+        }
+    }
+
 }
