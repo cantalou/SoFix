@@ -64,15 +64,22 @@ public class NativeLibraryDirectoriesFix {
         if (newInstance != nativeLibraryDirectories) {
             updateNativeLibraryDir(pathList, newInstance);
         }
+
+
     }
 
-    public static void updateNativeLibraryDir(Object instance, Object newNativeLibraryDirectories) throws NoSuchFieldException, IllegalAccessException {
+    private static void updateNativeLibraryDir(Object instance, Object newNativeLibraryDirectories) throws NoSuchFieldException, IllegalAccessException {
         setFieldValue(instance, "nativeLibraryDirectories", newNativeLibraryDirectories);
     }
 
-    public static Object getNativeLibraryDirectories(Object instance) throws NoSuchFieldException, IllegalAccessException {
+    private static Object getNativeLibraryDirectories(Object instance) throws NoSuchFieldException, IllegalAccessException {
         return getFieldValue(instance, "nativeLibraryDirectories");
     }
+
+    private static Object getNativeLibraryPathElements(){
+        nativeLibraryPathElements
+    }
+
 
     private static Object getPathList(ClassLoader classLoader) throws NoSuchFieldException, IllegalAccessException {
         return getFieldValue(classLoader, "pathList");
