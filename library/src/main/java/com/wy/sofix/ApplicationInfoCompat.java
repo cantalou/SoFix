@@ -1,20 +1,3 @@
-package com.wy.sofix;
-
-import android.content.Context;
-import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageInfo;
-import android.content.pm.PackageManager;
-import android.os.Build;
-import android.text.TextUtils;
-import android.util.Log;
-
-import java.io.File;
-import java.lang.reflect.Field;
-import java.util.HashMap;
-import java.util.Map;
-
-import static com.wy.sofix.SoFix.TAG;
-
 /*
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -28,10 +11,37 @@ import static com.wy.sofix.SoFix.TAG;
  * License for the specific language governing permissions and limitations under
  * the License.
  *
+ */
+package com.wy.sofix;
+
+import android.content.Context;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.text.TextUtils;
+import android.util.Log;
+import android.util.SparseArray;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.zip.ZipFile;
+
+import static com.wy.sofix.SoFix.TAG;
+
+/**
+ *
  * @author cantalou
  * @date 2018-06-18 14:34
  */
 public class ApplicationInfoCompat {
+
+    private static File cachedNativeLibraryDir;
+
+    private static SparseArray<String> cacheAbis = new SparseArray<>();
 
     private static PackageInfo getPackageInfoFromPM(Context context) {
         try {
@@ -87,6 +97,17 @@ public class ApplicationInfoCompat {
         return applicationInfo;
     }
 
+    /**
+     * @param context
+     * @return
+     */
+    public static File getNativeLibraryDir(Context context) {
+        if (cachedNativeLibraryDir != null) {
+            return cachedNativeLibraryDir;
+        }
+        cachedNativeLibraryDir = getNativeLibraryDir(getApplicationInfo(context));
+        return cachedNativeLibraryDir;
+    }
 
     /**
      * get default nativeLibraryDir from ApplicationInfo
@@ -120,8 +141,7 @@ public class ApplicationInfoCompat {
 
     public static String getPrimaryCpuAbi(ApplicationInfo info) {
         try {
-            Field primaryCpuAbiField = ApplicationInfo.class.getField("primaryCpuAbi");
-            return (String) primaryCpuAbiField.get(info);
+            return (String) ReflectUtil.getFieldValue(info, "primaryCpuAbi");
         } catch (Exception e) {
             Log.e(TAG, "getPrimaryCpuAbi: get 'primaryCpuAbi' from " + info + " error", e);
         }
@@ -129,7 +149,7 @@ public class ApplicationInfoCompat {
     }
 
     private static HashMap<String, String> getInstructionSetMap() {
-        HashMap<String, String> map = new HashMap<String, String>(16);
+        HashMap<String, String> map = new HashMap<>(16);
         map.put("armeabi", "arm");
         map.put("armeabi-v7a", "arm");
         map.put("mips", "mips");
@@ -159,5 +179,38 @@ public class ApplicationInfoCompat {
         } else {
             return null;
         }
+    }
+
+    /**
+     * find the supported abi of this apk
+     *
+     * @param apkPath
+     * @param apkZipFile
+     * @param soFileName
+     * @return
+     */
+    public static String getAbi(String apkPath, ZipFile apkZipFile, String soFileName) {
+
+        int key = apkPath.hashCode();
+        String cacheAbi = cacheAbis.get(key);
+        if (cacheAbi != null) {
+            return cacheAbi;
+        }
+
+        ArrayList<String> cpuAbi = new ArrayList<>();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            cpuAbi.addAll(Arrays.asList(Build.SUPPORTED_ABIS));
+        } else {
+            cpuAbi.add(Build.CPU_ABI);
+            cpuAbi.add(Build.CPU_ABI2);
+        }
+        for (String abi : cpuAbi) {
+            String entryPath = "lib" + File.separator + abi + File.separator + soFileName;
+            if (apkZipFile.getEntry(entryPath) != null) {
+                cacheAbis.put(key, abi);
+                return abi;
+            }
+        }
+        return "unknown";
     }
 }
