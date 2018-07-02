@@ -16,10 +16,13 @@ package com.wy.sofix;
 
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
+import android.os.Build;
 import android.util.SparseArray;
 
 import java.io.File;
 import java.lang.reflect.Array;
+import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.function.Consumer;
@@ -27,6 +30,7 @@ import java.util.function.Consumer;
 import dalvik.system.BaseDexClassLoader;
 
 import static com.wy.sofix.ReflectUtil.getFieldValue;
+import static com.wy.sofix.ReflectUtil.invoke;
 import static com.wy.sofix.ReflectUtil.setFieldValue;
 
 /**
@@ -42,7 +46,7 @@ public class NativeLibraryDirectoriesFix {
      *
      * @param context
      */
-    public static void fixNativeLibraryDirectories(Context context) throws NoSuchFieldException, IllegalAccessException {
+    public static void fixNativeLibraryDirectories(Context context) throws NoSuchFieldException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
         appendNativeLibraryDir(context.getClassLoader(), ApplicationInfoCompat.getNativeLibraryDir(context));
     }
 
@@ -54,32 +58,33 @@ public class NativeLibraryDirectoriesFix {
      * @throws NoSuchFieldException
      * @throws IllegalAccessException
      */
-    public static void appendNativeLibraryDir(ClassLoader classLoader, File nativeLibraryDir) throws NoSuchFieldException, IllegalAccessException {
+    public static void appendNativeLibraryDir(ClassLoader classLoader, File nativeLibraryDir) throws NoSuchFieldException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
         Object pathList = getPathList(classLoader);
         Object nativeLibraryDirectories = getNativeLibraryDirectories(pathList);
         if (contains(nativeLibraryDirectories, nativeLibraryDir)) {
             return;
         }
-        Object newInstance = expand(nativeLibraryDirectories, nativeLibraryDir);
-        if (newInstance != nativeLibraryDirectories) {
-            updateNativeLibraryDir(pathList, newInstance);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Object nativeLibraryPathElements = getNativeLibraryPathElements(pathList);
+            Object newPathElement = invoke(pathList, "makePathElements", new Class[]{List.class}, Arrays.asList(nativeLibraryDir));
+            Object newInstance = expand(nativeLibraryPathElements, newPathElement);
+            setFieldValue(pathList, "nativeLibraryDirectories", newInstance);
+        } else {
+            Object newInstance = expand(nativeLibraryDirectories, nativeLibraryDir);
+            if (newInstance != nativeLibraryDirectories) {
+                setFieldValue(pathList, "nativeLibraryDirectories", newInstance);
+            }
         }
-
-
-    }
-
-    private static void updateNativeLibraryDir(Object instance, Object newNativeLibraryDirectories) throws NoSuchFieldException, IllegalAccessException {
-        setFieldValue(instance, "nativeLibraryDirectories", newNativeLibraryDirectories);
     }
 
     private static Object getNativeLibraryDirectories(Object instance) throws NoSuchFieldException, IllegalAccessException {
         return getFieldValue(instance, "nativeLibraryDirectories");
     }
 
-    private static Object getNativeLibraryPathElements(){
-        nativeLibraryPathElements
+    private static Object getNativeLibraryPathElements(Object instance) throws NoSuchFieldException, IllegalAccessException {
+        return getFieldValue(instance, "nativeLibraryPathElements");
     }
-
 
     private static Object getPathList(ClassLoader classLoader) throws NoSuchFieldException, IllegalAccessException {
         return getFieldValue(classLoader, "pathList");
@@ -136,9 +141,11 @@ public class NativeLibraryDirectoriesFix {
     }
 
     public static boolean containsNativeLibraryDir(ClassLoader classLoader, File nativeLibraryDir) throws NoSuchFieldException, IllegalAccessException {
+
         if (hasFixClassLoader.get(classLoader.hashCode())) {
             return true;
         }
+
         Object pathList = getPathList(classLoader);
         Object nativeLibraryDirectories = getNativeLibraryDirectories(pathList);
         boolean result = contains(nativeLibraryDirectories, nativeLibraryDir);

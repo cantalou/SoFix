@@ -17,15 +17,18 @@ package com.wy.sofix;
 import android.util.SparseArray;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
 /**
- *
  * @author cantalou
  * @date 2018-06-30 16:08
  */
 public class ReflectUtil {
 
-    private static SparseArray<Field> cache = new SparseArray<>();
+    private static SparseArray<Field> fieldCache = new SparseArray<>();
+
+    private static SparseArray<Method> methodCache = new SparseArray<>();
 
     public static void setFieldValue(Object instance, String fieldName, Object value) throws NoSuchFieldException, IllegalAccessException {
         Field field = findField(instance, fieldName);
@@ -35,6 +38,43 @@ public class ReflectUtil {
     public static Object getFieldValue(Object instance, String fieldName) throws NoSuchFieldException, IllegalAccessException {
         Field field = findField(instance, fieldName);
         return field.get(instance);
+    }
+
+    public static Object invoke(Object instance, String name, Class<?>[] paramTypes, Object... param) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+        for (Class<?> clazz = instance.getClass(); clazz != null; clazz = clazz.getSuperclass()) {
+            int key = clazz.hashCode() ^ name.hashCode();
+            for (Class<?> paramType : paramTypes) {
+                key ^= paramType.hashCode();
+            }
+            Method method = methodCache.get(key);
+            if (method != null && name.equals(method.getName())) {
+                return method;
+            }
+
+            try {
+                method = clazz.getDeclaredMethod(name, paramTypes);
+                if (!method.isAccessible()) {
+                    method.setAccessible(true);
+                }
+                methodCache.put(key, method);
+                return method.invoke(instance, param);
+            } catch (NoSuchMethodException e) {
+                // ignore and search next
+            }
+
+            try {
+                method = clazz.getMethod(name, paramTypes);
+                if (!method.isAccessible()) {
+                    method.setAccessible(true);
+                }
+                methodCache.put(key, method);
+                return method.invoke(instance, param);
+            } catch (NoSuchMethodException e) {
+                // ignore and search next
+            }
+        }
+        throw new NoSuchMethodException("Method " + name + " not found in " + instance.getClass() + " and super class");
+
     }
 
     /**
@@ -48,16 +88,28 @@ public class ReflectUtil {
     public static Field findField(Object instance, String name) throws NoSuchFieldException {
         for (Class<?> clazz = instance.getClass(); clazz != null; clazz = clazz.getSuperclass()) {
             int key = clazz.hashCode() ^ name.hashCode();
-            Field field = cache.get(key);
-            if (field != null) {
+            Field field = fieldCache.get(key);
+            if (field != null && name.equals(field.getName())) {
                 return field;
             }
+
             try {
                 field = clazz.getDeclaredField(name);
                 if (!field.isAccessible()) {
                     field.setAccessible(true);
                 }
-                cache.put(key, field);
+                fieldCache.put(key, field);
+                return field;
+            } catch (NoSuchFieldException e) {
+                // ignore and search next
+            }
+
+            try {
+                field = clazz.getField(name);
+                if (!field.isAccessible()) {
+                    field.setAccessible(true);
+                }
+                fieldCache.put(key, field);
                 return field;
             } catch (NoSuchFieldException e) {
                 // ignore and search next
