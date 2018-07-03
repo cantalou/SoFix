@@ -59,23 +59,24 @@ public class NativeLibraryDirectoriesFix {
      * @throws IllegalAccessException
      */
     public static void appendNativeLibraryDir(ClassLoader classLoader, File nativeLibraryDir) throws NoSuchFieldException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-        Object pathList = getPathList(classLoader);
-        Object nativeLibraryDirectories = getNativeLibraryDirectories(pathList);
-        if (contains(nativeLibraryDirectories, nativeLibraryDir)) {
+        if (contains(classLoader, nativeLibraryDir)) {
             return;
         }
+        Object pathList = getPathList(classLoader);
+        Object nativeLibraryDirectories = getNativeLibraryDirectories(pathList);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             Object nativeLibraryPathElements = getNativeLibraryPathElements(pathList);
             Object newPathElement = invoke(pathList, "makePathElements", new Class[]{List.class}, Arrays.asList(nativeLibraryDir));
             Object newInstance = expand(nativeLibraryPathElements, newPathElement);
-            setFieldValue(pathList, "nativeLibraryDirectories", newInstance);
+            setFieldValue(pathList, "nativeLibraryPathElements", newInstance);
         } else {
             Object newInstance = expand(nativeLibraryDirectories, nativeLibraryDir);
             if (newInstance != nativeLibraryDirectories) {
                 setFieldValue(pathList, "nativeLibraryDirectories", newInstance);
             }
         }
+        hasFixClassLoader.put(classLoader.hashCode() ^ nativeLibraryDir.hashCode(), true);
     }
 
     private static Object getNativeLibraryDirectories(Object instance) throws NoSuchFieldException, IllegalAccessException {
@@ -134,22 +135,20 @@ public class NativeLibraryDirectoriesFix {
     }
 
     public static boolean containsNativeLibraryDir(Context context, ClassLoader classLoader) throws NoSuchFieldException, IllegalAccessException {
-        if (hasFixClassLoader.get(classLoader.hashCode())) {
+        File nativeLibraryDir = ApplicationInfoCompat.getNativeLibraryDir(context);
+        if (hasFixClassLoader.get(classLoader.hashCode() ^ nativeLibraryDir.hashCode())) {
             return true;
         }
-        return containsNativeLibraryDir(classLoader, ApplicationInfoCompat.getNativeLibraryDir(context));
+        return containsNativeLibraryDir(classLoader, nativeLibraryDir);
     }
 
     public static boolean containsNativeLibraryDir(ClassLoader classLoader, File nativeLibraryDir) throws NoSuchFieldException, IllegalAccessException {
-
-        if (hasFixClassLoader.get(classLoader.hashCode())) {
+        if (hasFixClassLoader.get(classLoader.hashCode() ^ nativeLibraryDir.hashCode())) {
             return true;
         }
-
         Object pathList = getPathList(classLoader);
         Object nativeLibraryDirectories = getNativeLibraryDirectories(pathList);
         boolean result = contains(nativeLibraryDirectories, nativeLibraryDir);
-        hasFixClassLoader.put(classLoader.hashCode(), result);
         return result;
     }
 
