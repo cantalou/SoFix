@@ -10,18 +10,17 @@
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
  * License for the specific language governing permissions and limitations under
  * the License.
- *
  */
-package com.wy.sofix;
+package com.wy.sofix.loader;
 
 /**
- * Except to use original caller classLoader
+ * Force caller to handle the error {@link UnsatisfiedLinkError}
  * @author cantalou
- * @date 2018-06-18 14:50
+ * @date 2018-07-01 10:27
  */
-public interface SoLoader {
+public class SoLoadFailureException extends Exception {
 
-    void loadLibrary(String libName);
-
-    void load(String path);
+    public SoLoadFailureException(Throwable cause) {
+        super(cause);
+    }
 }

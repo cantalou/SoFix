@@ -27,9 +27,9 @@ import java.util.zip.CRC32;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import static com.wy.sofix.IoUtil.IO_BUF_SIZE;
-import static com.wy.sofix.IoUtil.closeSilent;
-import static com.wy.sofix.IoUtil.copy;
+import static com.wy.sofix.utils.IoUtil.IO_BUF_SIZE;
+import static com.wy.sofix.utils.IoUtil.closeSilent;
+import static com.wy.sofix.utils.IoUtil.copy;
 import static com.wy.sofix.SoFix.TAG;
 
 /**

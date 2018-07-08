@@ -20,15 +20,22 @@ import android.os.AsyncTask;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.wy.sofix.compat.ApplicationInfoCompat;
+import com.wy.sofix.loader.AsyncSoLoader;
+import com.wy.sofix.loader.SoLoadFailureException;
+import com.wy.sofix.loader.SoLoader;
+import com.wy.sofix.utils.IoUtil;
+
 import java.io.File;
 
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.zip.ZipFile;
 
 import static com.wy.sofix.Extractor.extract;
-import static com.wy.sofix.NativeLibraryDirectoriesFix.appendNativeLibraryDir;
-import static com.wy.sofix.NativeLibraryDirectoriesFix.containsNativeLibraryDir;
+import static com.wy.sofix.compat.NativeLibraryDirectoriesCompat.appendNativeLibraryDir;
+import static com.wy.sofix.compat.NativeLibraryDirectoriesCompat.containsNativeLibraryDir;
 
 
 /**
@@ -135,8 +142,11 @@ public class SoFix {
         File apkFile = new File(context.getPackageCodePath());
         ZipFile apkZipFile = null;
         try {
-            apkZipFile = IoUtil.getZipFile(apkFile);
-            String arch = ApplicationInfoCompat.getAbi(context.getPackageCodePath(), apkZipFile, soFileName);
+            apkZipFile = IoUtil.getZipFileWithRetry(apkFile);
+            String arch = ApplicationInfoCompat.getPrimaryCpuAbi(applicationInfo);
+            if (TextUtils.isEmpty(arch)) {
+                arch = ApplicationInfoCompat.getAbi(context.getPackageCodePath(), apkZipFile, soFileName);
+            }
             performReload(apkZipFile, libName, classLoader, nativeLibraryDir, arch, soFileNames, soLoader);
         } catch (Throwable e) {
             throw new SoLoadFailureException(e);
@@ -145,12 +155,10 @@ public class SoFix {
         }
     }
 
-    public static void performReload(ZipFile apkZipFile, String library, ClassLoader cl, File nativeLibraryDir, String arch, ArrayList<String> soFileNames, SoLoader soLoader) throws IllegalAccessException, NoSuchFieldException, IOException {
-
+    public static void performReload(ZipFile apkZipFile, String library, ClassLoader cl, File nativeLibraryDir, String arch, ArrayList<String> soFileNames, SoLoader soLoader) throws IllegalAccessException, NoSuchFieldException, IOException, NoSuchMethodException, InvocationTargetException {
         if (!containsNativeLibraryDir(cl, nativeLibraryDir)) {
             appendNativeLibraryDir(cl, nativeLibraryDir);
         }
-
         try {
             reload(apkZipFile, library, nativeLibraryDir, arch, soFileNames, soLoader, false);
         } catch (UnsatisfiedLinkError e) {

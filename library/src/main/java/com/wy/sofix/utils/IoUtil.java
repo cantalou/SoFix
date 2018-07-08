@@ -11,7 +11,7 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
-package com.wy.sofix;
+package com.wy.sofix.utils;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -30,6 +30,9 @@ public class IoUtil {
 
     public static final int IO_BUF_SIZE = 1024 * 16;
 
+    /**
+     * global retry time when error thrown
+     */
     public static final int RETRY_TIMES = 3;
 
     public static void copy(InputStream is, File out) throws IOException {
@@ -63,6 +66,10 @@ public class IoUtil {
         }
     }
 
+    /***
+     * compat version thar below API
+     * @param closeables
+     */
     public static void closeSilent(ZipFile... closeables) {
         for (Closeable closeable : closeables) {
             if (closeable != null) {
@@ -75,7 +82,7 @@ public class IoUtil {
         }
     }
 
-    public static ZipFile getZipFile(File file) throws IOException {
+    public static ZipFile getZipFileWithRetry(File file) throws IOException {
         IOException exception = null;
         int times = 0;
         while (times++ < RETRY_TIMES) {

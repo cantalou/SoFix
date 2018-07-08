@@ -12,7 +12,7 @@
  * the License.
  *
  */
-package com.wy.sofix;
+package com.wy.sofix.utils;
 
 import android.util.SparseArray;
 
@@ -48,7 +48,7 @@ public class ReflectUtil {
             }
             Method method = methodCache.get(key);
             if (method != null && name.equals(method.getName())) {
-                return method;
+                return method.invoke(instance, param);
             }
 
             try {

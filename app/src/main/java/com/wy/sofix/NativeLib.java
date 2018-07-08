@@ -15,11 +15,8 @@ package com.wy.sofix;
 
 /**
  * @author cantalou
- * @date 2018-07-01 10:51
+ * @date 2018-07-08 10:57
  */
-public interface AsyncSoLoader extends SoLoader {
-
-    void onSuccess();
-
-    void onFailure(Throwable e);
+public class NativeLib {
+    public static native String getString();
 }

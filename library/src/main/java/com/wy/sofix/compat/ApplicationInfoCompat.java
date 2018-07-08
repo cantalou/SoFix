@@ -12,7 +12,7 @@
  * the License.
  *
  */
-package com.wy.sofix;
+package com.wy.sofix.compat;
 
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
@@ -23,11 +23,12 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.util.SparseArray;
 
+import com.wy.sofix.utils.ReflectUtil;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Map;
 import java.util.zip.ZipFile;
 
 import static com.wy.sofix.SoFix.TAG;
@@ -115,9 +116,10 @@ public class ApplicationInfoCompat {
      * @param info
      * @return path so file stored <br/>
      * rg:<br/>
-     * 1. >= 4.0  /data/data/<[package-name]/lib    <br/>
-     * 2. >= 4.1  /data/app-lib/[package-name]-n    <br/>
-     * 3. >= 6.0  /data/app/[package-name]-n/lib/[arch]
+     * 1. >= 4.0  /data/data/<[package-name]/lib         <br/>
+     * 2. >= 4.1  /data/app-lib/[package-name]-n         <br/>
+     * 3. >= 6.0  /data/app/[package-name]-n/lib/[arch]  <br/>
+     * 4. >= 7.0  /data/app/[package-name]-n/lib/[arch]  <br/>
      */
     public static File getNativeLibraryDir(ApplicationInfo info) {
         String nativeLibraryDir = info.nativeLibraryDir;
