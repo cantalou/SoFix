@@ -23,6 +23,7 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.util.SparseArray;
 
+import com.wy.sofix.BuildConfig;
 import com.wy.sofix.utils.ReflectUtil;
 
 import java.io.File;
@@ -136,6 +137,10 @@ public class ApplicationInfoCompat {
                 } catch (Exception e) {
                     Log.w(TAG, "getNativeLibraryDir: ", e);
                 }
+            }
+        }else{
+            if (BuildConfig.DEBUG) {
+                Log.d(TAG, "getNativeLibraryDir: " + nativeLibraryDir);
             }
         }
         return TextUtils.isEmpty(nativeLibraryDir) ? null : new File(nativeLibraryDir);

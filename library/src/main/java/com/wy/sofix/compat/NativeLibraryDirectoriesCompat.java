@@ -17,7 +17,10 @@ package com.wy.sofix.compat;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.os.Build;
+import android.util.Log;
 import android.util.SparseArray;
+
+import com.wy.sofix.BuildConfig;
 
 import java.io.File;
 import java.lang.reflect.Array;
@@ -26,6 +29,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import static com.wy.sofix.SoFix.TAG;
 import static com.wy.sofix.utils.ReflectUtil.getFieldValue;
 import static com.wy.sofix.utils.ReflectUtil.invoke;
 import static com.wy.sofix.utils.ReflectUtil.setFieldValue;
@@ -65,6 +69,15 @@ public class NativeLibraryDirectoriesCompat {
      * @throws IllegalAccessException
      */
     public static void appendNativeLibraryDir(ClassLoader classLoader, File nativeLibraryDir) throws NoSuchFieldException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+
+        if (BuildConfig.DEBUG) {
+            Log.i(TAG, "appendNativeLibraryDir: append nativeLibraryDir:" + nativeLibraryDir + " to " + classLoader);
+        }
+
+        if (nativeLibraryDir == null || !nativeLibraryDir.exists() || nativeLibraryDir.isFile()) {
+            throw new IllegalArgumentException("file nativeLibraryDir:" + nativeLibraryDir + " must exist and type is directory");
+        }
+
         if (containsNativeLibraryDir(classLoader, nativeLibraryDir)) {
             return;
         }
@@ -85,6 +98,8 @@ public class NativeLibraryDirectoriesCompat {
             setFieldValue(pathList, "nativeLibraryDirectories", newInstance);
         }
         hasFixClassLoader.put(classLoader.hashCode() ^ nativeLibraryDir.hashCode(), true);
+        Log.i(TAG, "appendNativeLibraryDir: append success result:" + classLoader);
+
     }
 
     private static Object getNativeLibraryDirectories(Object instance) throws NoSuchFieldException, IllegalAccessException {
@@ -142,6 +157,10 @@ public class NativeLibraryDirectoriesCompat {
         return original.equals(path);
     }
 
+    public static boolean containsNativeLibraryDir(Context context) throws NoSuchFieldException, IllegalAccessException {
+        return containsNativeLibraryDir(context, context.getClassLoader());
+    }
+
     public static boolean containsNativeLibraryDir(Context context, ClassLoader classLoader) throws NoSuchFieldException, IllegalAccessException {
         File nativeLibraryDir = ApplicationInfoCompat.getNativeLibraryDir(context);
         return containsNativeLibraryDir(classLoader, nativeLibraryDir);
@@ -149,12 +168,15 @@ public class NativeLibraryDirectoriesCompat {
 
     public static boolean containsNativeLibraryDir(ClassLoader classLoader, File nativeLibraryDir) throws NoSuchFieldException, IllegalAccessException {
         int key = classLoader.hashCode() ^ nativeLibraryDir.hashCode();
-        if (hasFixClassLoader.get(key)) {
+        if (hasFixClassLoader.get(key) != null) {
             return true;
         }
         Object pathList = getPathList(classLoader);
         Object nativeLibraryDirectories = getNativeLibraryDirectories(pathList);
         boolean result = contains(nativeLibraryDirectories, nativeLibraryDir);
+        if (BuildConfig.DEBUG) {
+            Log.d(TAG, "containsNativeLibraryDir: classLoader " + classLoader + " contains library path " + nativeLibraryDir + " " + result);
+        }
         if (result) {
             hasFixClassLoader.put(key, true);
         }
