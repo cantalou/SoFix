@@ -2,7 +2,7 @@ package com.wy.sofix.compat;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;
-import android.support.test.filters.MediumTest;
+import android.support.test.filters.LargeTest;
 import android.support.test.runner.AndroidJUnit4;
 
 import org.junit.Before;
@@ -11,6 +11,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 import java.io.File;
+import java.util.Random;
 
 import dalvik.system.PathClassLoader;
 
@@ -20,7 +21,7 @@ import static org.junit.Assert.*;
  * @author cantalou
  * @date 2018-07-08 18:55
  */
-@MediumTest
+@LargeTest
 @RunWith(AndroidJUnit4.class)
 @Suite.SuiteClasses({NativeLibraryDirectoriesCompatTest.class})
 public class NativeLibraryDirectoriesCompatTest {
@@ -35,18 +36,18 @@ public class NativeLibraryDirectoriesCompatTest {
     public void setUp() throws Exception {
         context = InstrumentationRegistry.getTargetContext();
         classLoader = (PathClassLoader) context.getClassLoader();
-        newNativeLibraryDir = new File(context.getFilesDir(), "newNativeLibraryDir");
+        newNativeLibraryDir = new File(context.getFilesDir(), "newNativeLibraryDir" + new Random().nextInt(100));
         newNativeLibraryDir.mkdirs();
     }
 
     @Test
-    public void fixNativeLibraryDirectories() throws Exception {
-        NativeLibraryDirectoriesCompat.fixNativeLibraryDirectories(context);
-    }
-
-    @Test
     public void appendNativeLibraryDir() throws Exception {
+        assertTrue(!classLoader.toString()
+                               .contains("newNativeLibraryDir"));
+        assertTrue(!NativeLibraryDirectoriesCompat.containsNativeLibraryDir(classLoader, newNativeLibraryDir));
+
         NativeLibraryDirectoriesCompat.appendNativeLibraryDir(classLoader, newNativeLibraryDir);
+
         assertTrue(classLoader.toString()
                               .contains("newNativeLibraryDir"));
         assertTrue(NativeLibraryDirectoriesCompat.containsNativeLibraryDir(classLoader, newNativeLibraryDir));

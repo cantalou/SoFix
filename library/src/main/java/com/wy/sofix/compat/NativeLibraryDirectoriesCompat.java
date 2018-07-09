@@ -118,6 +118,11 @@ public class NativeLibraryDirectoriesCompat {
         if (extraElements == null || extraElements.length == 0) {
             return original;
         }
+
+        if (original == null) {
+            return extraElements;
+        }
+
         Class<?> originalClass = original.getClass();
         if (originalClass.isArray()) {
             int len = Array.getLength(original);
