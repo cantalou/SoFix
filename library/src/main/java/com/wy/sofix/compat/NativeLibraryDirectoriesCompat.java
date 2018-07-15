@@ -25,6 +25,7 @@ import com.wy.sofix.BuildConfig;
 import java.io.File;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -87,7 +88,12 @@ public class NativeLibraryDirectoriesCompat {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             //add new element to nativeLibraryPathElements
             Object nativeLibraryPathElements = getNativeLibraryPathElements(pathList);
-            Object[] newPathElement = (Object[]) invoke(pathList, "makePathElements", new Class[]{List.class}, Arrays.asList(nativeLibraryDir));
+            Object[] newPathElement = null;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                newPathElement = (Object[]) invoke(pathList, "makePathElements", new Class[]{List.class, File.class, List.class}, Arrays.asList(nativeLibraryDir), null, new ArrayList<>());
+            } else {
+                newPathElement = (Object[]) invoke(pathList, "makePathElements", new Class[]{List.class}, Arrays.asList(nativeLibraryDir));
+            }
             Object newInstance = expand(nativeLibraryPathElements, newPathElement[0]);
             setFieldValue(pathList, "nativeLibraryPathElements", newInstance);
 
