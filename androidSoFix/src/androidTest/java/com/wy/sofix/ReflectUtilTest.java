@@ -8,6 +8,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+
 import static org.junit.Assert.*;
 
 /**
@@ -41,6 +45,11 @@ public class ReflectUtilTest {
         private String sf4(String value) {
             return "4";
         }
+
+        private String fuzzyMethod(List<String> list) {
+            return "fuzzyMethod" + (list != null && !list.isEmpty() ? list.get(0) : "");
+        }
+
     }
 
     static class Bean extends SuperBean {
@@ -125,6 +134,15 @@ public class ReflectUtilTest {
         assertEquals("2", ReflectUtil.invoke(bean, "sf2", new Class[]{String.class}, new Object[]{""}));
         assertEquals(3, ReflectUtil.invoke(bean, "sf3", new Class[]{}, new Object[]{}));
         assertEquals("4", ReflectUtil.invoke(bean, "sf4", new Class[]{String.class}, new Object[]{""}));
+
+        ArrayList arrayList = new ArrayList();
+        arrayList.add("ArrayList");
+        assertEquals("fuzzyMethodArrayList", ReflectUtil.invoke(bean, "fuzzyMethod", null, arrayList));
+
+        LinkedList linkedList = new LinkedList();
+        linkedList.add("LinkedList");
+        assertEquals("fuzzyMethodLinkedList", ReflectUtil.invoke(bean, "fuzzyMethod", null, linkedList));
+
 
         //subclass
         assertEquals(11, ReflectUtil.invoke(bean, "f1", new Class[]{}, new Object[]{}));

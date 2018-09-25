@@ -40,15 +40,24 @@ public class ReflectUtil {
         return field.get(instance);
     }
 
-    public static Object invoke(Object instance, String name, Class<?>[] paramTypes, Object... param) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
+    public static Object invoke(Object instance, String name, Class<?>[] paramTypes, Object... params) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
         for (Class<?> clazz = instance.getClass(); clazz != null; clazz = clazz.getSuperclass()) {
             int key = clazz.hashCode() ^ name.hashCode();
-            for (Class<?> paramType : paramTypes) {
-                key ^= paramType.hashCode();
+
+            if (paramTypes != null && paramTypes.length > 0) {
+                for (Class<?> paramType : paramTypes) {
+                    key ^= paramType.hashCode();
+                }
+            } else if (params != null && params.length > 0) {
+                for (Object param : params) {
+                    key ^= param.getClass()
+                                .hashCode();
+                }
             }
+
             Method method = methodCache.get(key);
             if (method != null && name.equals(method.getName())) {
-                return method.invoke(instance, param);
+                return method.invoke(instance, params);
             }
 
             try {
@@ -57,7 +66,7 @@ public class ReflectUtil {
                     method.setAccessible(true);
                 }
                 methodCache.put(key, method);
-                return method.invoke(instance, param);
+                return method.invoke(instance, params);
             } catch (NoSuchMethodException e) {
                 // ignore and search next
             }
@@ -68,9 +77,44 @@ public class ReflectUtil {
                     method.setAccessible(true);
                 }
                 methodCache.put(key, method);
-                return method.invoke(instance, param);
+                return method.invoke(instance, params);
             } catch (NoSuchMethodException e) {
                 // ignore and search next
+            }
+
+            if (params == null || params.length == 0) {
+                continue;
+            }
+
+            Method[] declareMethods = clazz.getDeclaredMethods();
+            Method[] publicMethods = clazz.getMethods();
+
+            Method[] allMethods = new Method[declareMethods.length + publicMethods.length];
+            System.arraycopy(declareMethods, 0, allMethods, 0, declareMethods.length);
+            System.arraycopy(publicMethods, 0, allMethods, declareMethods.length, publicMethods.length);
+
+            outer:
+            for (Method method1 : allMethods) {
+                if (!name.equals(method1.getName())) {
+                    continue;
+                }
+
+                Class[] parameterTypes = method1.getParameterTypes();
+                if (parameterTypes.length != params.length) {
+                    continue;
+                }
+
+                for (int i = 0; i < parameterTypes.length; i++) {
+                    if (!parameterTypes[i].isAssignableFrom(params[i].getClass())) {
+                        continue outer;
+                    }
+                }
+
+                if (!method1.isAccessible()) {
+                    method1.setAccessible(true);
+                }
+                methodCache.put(key, method1);
+                return method1.invoke(instance, params);
             }
         }
         throw new NoSuchMethodException("Method " + name + " not found in " + instance.getClass() + " and super class");

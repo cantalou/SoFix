@@ -197,7 +197,6 @@ public class ApplicationInfoCompat {
      * @return
      */
     public static String getAbi(String apkPath, ZipFile apkZipFile, String soFileName) {
-
         int key = apkPath.hashCode();
         String cacheAbi = cacheAbis.get(key);
         if (cacheAbi != null) {
