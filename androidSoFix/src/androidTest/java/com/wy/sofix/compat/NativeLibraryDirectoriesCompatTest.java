@@ -8,6 +8,7 @@ import android.support.test.runner.AndroidJUnit4;
 
 import com.wy.sofix.utils.ReflectUtil;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -18,6 +19,7 @@ import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.Random;
 
+import dalvik.system.DexClassLoader;
 import dalvik.system.PathClassLoader;
 
 import static org.junit.Assert.*;
@@ -37,12 +39,20 @@ public class NativeLibraryDirectoriesCompatTest {
 
     File newNativeLibraryDir;
 
+    DexClassLoader dexClassLoader;
+
     @Before
     public void setUp() throws Exception {
         context = InstrumentationRegistry.getTargetContext();
         classLoader = (PathClassLoader) context.getClassLoader();
         newNativeLibraryDir = new File(context.getFilesDir(), "newNativeLibraryDir" + new Random().nextInt(100));
         newNativeLibraryDir.mkdirs();
+        dexClassLoader = new DexClassLoader("", newNativeLibraryDir.getAbsolutePath(), "", classLoader);
+    }
+
+    @After
+    public void tearDown() {
+        newNativeLibraryDir.delete();
     }
 
     @Test
@@ -57,28 +67,35 @@ public class NativeLibraryDirectoriesCompatTest {
         } else {
             ((Collection) ReflectUtil.getFieldValue(pathList, "nativeLibraryDirectories")).clear();
         }
-        assertTrue(!classLoader.toString()
-                               .contains(nativeLibraryDir.getName()));
+
+        String flagStr1 = nativeLibraryDir.getAbsolutePath() + ",";
+        String flagStr2 = nativeLibraryDir.getAbsolutePath() + "]";
+
+        String classLoaderStr = classLoader.toString();
+        boolean matchResult = classLoaderStr.contains(flagStr1) || classLoaderStr.contains(flagStr2);
+        assertTrue(!matchResult);
         assertTrue(!NativeLibraryDirectoriesCompat.containsNativeLibraryDir(classLoader, nativeLibraryDir));
 
         NativeLibraryDirectoriesCompat.fixNativeLibraryDirectories(context);
 
+        classLoaderStr = classLoader.toString();
+        matchResult = classLoaderStr.contains(flagStr1) || classLoaderStr.contains(flagStr2);
+        assertTrue(matchResult);
         assertTrue(NativeLibraryDirectoriesCompat.containsNativeLibraryDir(classLoader, nativeLibraryDir));
-        assertTrue(classLoader.toString()
-                              .contains(nativeLibraryDir.getName()));
     }
 
     @Test
     public void appendNativeLibraryDir() throws Exception {
-        assertTrue(!classLoader.toString()
-                               .contains("newNativeLibraryDir"));
-        assertTrue(!NativeLibraryDirectoriesCompat.containsNativeLibraryDir(classLoader, newNativeLibraryDir));
 
-        NativeLibraryDirectoriesCompat.appendNativeLibraryDir(classLoader, newNativeLibraryDir);
+        String classLoaderStr = dexClassLoader.toString();
+        assertTrue(!classLoaderStr.contains(newNativeLibraryDir.getName()));
+        assertTrue(!NativeLibraryDirectoriesCompat.containsNativeLibraryDir(dexClassLoader, newNativeLibraryDir));
 
-        assertTrue(classLoader.toString()
-                              .contains("newNativeLibraryDir"));
-        assertTrue(NativeLibraryDirectoriesCompat.containsNativeLibraryDir(classLoader, newNativeLibraryDir));
+        NativeLibraryDirectoriesCompat.appendNativeLibraryDir(dexClassLoader, newNativeLibraryDir);
+
+        classLoaderStr = dexClassLoader.toString();
+        assertTrue(classLoaderStr.contains(newNativeLibraryDir.getName()));
+        assertTrue(NativeLibraryDirectoriesCompat.containsNativeLibraryDir(dexClassLoader, newNativeLibraryDir));
     }
 
     @Test

@@ -28,28 +28,40 @@ import java.util.zip.ZipFile;
  */
 public class IoUtil {
 
-    public static final int IO_BUF_SIZE = 1024 * 16;
+    public static final int IO_BUF_SIZE = 1024 * 4;
 
     /**
      * global retry time when error thrown
      */
     public static final int RETRY_TIMES = 3;
 
-    public static void copy(InputStream is, File out) throws IOException {
-        FileOutputStream fileOutputStream = new FileOutputStream(out);
-        BufferedOutputStream bos = new BufferedOutputStream(fileOutputStream, IO_BUF_SIZE);
-        BufferedInputStream bis = new BufferedInputStream(is);
+    /**
+     * Copy data from a source stream to destFile.
+     * Return true if succeed, return false if failed.
+     */
+    public static boolean copy(InputStream inputStream, File destFile) {
         try {
-            byte[] buf = new byte[IO_BUF_SIZE];
-            int len;
-            while ((len = bis.read(buf)) != -1) {
-                bos.write(buf, 0, len);
+            if (destFile.exists()) {
+                destFile.delete();
             }
-            bos.flush();
-            fileOutputStream.getFD()
-                            .sync();
-        } finally {
-            closeSilent(bis, bos);
+            FileOutputStream out = new FileOutputStream(destFile);
+            try {
+                byte[] buffer = new byte[IO_BUF_SIZE];
+                int bytesRead;
+                while ((bytesRead = inputStream.read(buffer)) >= 0) {
+                    out.write(buffer, 0, bytesRead);
+                }
+            } finally {
+                out.flush();
+                try {
+                    out.getFD().sync();
+                } catch (IOException e) {
+                }
+                out.close();
+            }
+            return true;
+        } catch (IOException e) {
+            return false;
         }
     }
 

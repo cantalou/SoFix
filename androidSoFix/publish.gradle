@@ -1,6 +1,5 @@
-apply plugin: 'com.jfrog.bintray'
-apply plugin: 'maven'
 apply plugin: 'maven-publish'
+apply plugin: 'com.jfrog.bintray'
 
 
 if (project.gradle.startParameter.taskNames.contains("bintray")) {
@@ -13,16 +12,21 @@ if (project.gradle.startParameter.taskNames.contains("bintray")) {
         version = oldVersion.substring(0, index + 1) + Integer.toString(Integer.parseInt(oldVersion.substring(index + 1)) + 1)
     }
     println "update version from ${oldVersion} to ${version} "
-    setProperty("PROJ_VERSION", version)
-    project.ext.set("PRE_PROJ_VERSION", oldVersion)
 }
 
 afterEvaluate {
     def task = tasks.findByName("bintrayUpload")
     if (task != null) {
+        task.dependsOn tasks.findByName("assembleRelease")
         task.doLast {
-            String oldVersion = getProperty("PRE_PROJ_VERSION")
-            String version = getProperty("PROJ_VERSION")
+            String oldVersion = getProperty("PROJ_VERSION")
+            def version
+            int index = oldVersion.lastIndexOf(".")
+            if (index == -1) {
+                version = Integer.toString(Integer.parseInt(oldVersion) + 1)
+            } else {
+                version = oldVersion.substring(0, index + 1) + Integer.toString(Integer.parseInt(oldVersion.substring(index + 1)) + 1)
+            }
             println "upload success write new version ${version} to file"
             def propertiesFile = file("${projectDir}/gradle.properties")
             def newContent = propertiesFile.getText("UTF-8").replace(oldVersion, version)
@@ -92,9 +96,9 @@ publishing {
             artifactId getProperty("PROJ_ARTIFACTID")
             version getProperty("PROJ_VERSION")
 
-            println groupId
-            println artifactId
-            println version
+            println "groupId $groupId"
+            println "artifactId $artifactId"
+            println "version $version"
 
             artifact sourcesJar
             artifact javadocJar
@@ -133,7 +137,7 @@ publishing {
 
             artifact sourcesJar
             artifact javadocJar
-            artifact "${project.buildDir}/intermediates/bundles/release/classes.jar"
+            artifact "${project.buildDir}/intermediates/packaged-classes/release/classes.jar"
 
             pom.withXml {
                 def root = asNode()
@@ -166,7 +170,7 @@ bintray {
     user = getProperty("BINTRAY_USER")
     key = getProperty("BINTRAY_KEY")
 
-    def publicType = "all"
+    def publicType = "aar"
 
     if (project.hasProperty("publicType")) {
         publicType = getProperty("publicType")
@@ -193,7 +197,7 @@ bintray {
         vcsUrl = getProperty("PROJ_VCSURL")
         licenses = ['Apache-2.0']
         publicDownloadNumbers = true
-
+        publish = true
         version {
             name = getProperty("PROJ_VERSION")
             vcsTag = getProperty("PROJ_VERSION")
