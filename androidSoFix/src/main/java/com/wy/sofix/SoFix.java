@@ -83,6 +83,19 @@ public class SoFix {
         }
 
         deleteRetainFile(context);
+
+        // we want to add the "fix dir" early for skipping "performLoad" method invoking when app starts in different process
+        File nativeLibraryDir = generateNativeLibraryDir(context);
+        if (nativeLibraryDir.exists()) {
+            try {
+                ClassLoader classLoader = soLoader.getClass()
+                                                  .getClassLoader();
+                NativeLibraryDirectoriesCompat.appendNativeLibraryDir(classLoader, nativeLibraryDir);
+            } catch (Exception e) {
+                //ignore if we can not add version dir
+            }
+        }
+
         try {
             soLoader.loadLibrary(libName);
         } catch (UnsatisfiedLinkError error) {
@@ -94,7 +107,7 @@ public class SoFix {
     }
 
     /**
-     * Delete the remain so file was extracted in previous version
+     * Delete the remaining file was extracted in previous version
      *
      * @param context
      */
