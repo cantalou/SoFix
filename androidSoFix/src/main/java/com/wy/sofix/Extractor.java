@@ -54,7 +54,6 @@ public class Extractor {
      * @return return new newNativeLibraryDir that so file installed if nativeLibraryDir could
      */
     public static void extract(ZipFile apkZipFile, String arch, File nativeLibraryDir, ArrayList<String> soFileNames, boolean force) throws IOException {
-
         if (apkZipFile == null) {
             throw new NullPointerException("param apkZipFile was null");
         }
@@ -72,6 +71,7 @@ public class Extractor {
                     ZipEntry soEntry = apkZipFile.getEntry(entryPath);
                     File soFile = new File(nativeLibraryDir, soFileName);
                     extract(apkZipFile, soEntry, soFile, force);
+                    return;
                 }
             } catch (IOException e) {
                 Log.w(TAG, "extract: ", e);
@@ -82,10 +82,10 @@ public class Extractor {
     }
 
     private static void extract(ZipFile apkFile, ZipEntry soEntry, File soFile, boolean force) throws IOException {
-        if (!force && soFile.exists() && soFile.canRead() && soFile.length() == soEntry.getSize() && getCrc(soFile) == soEntry.getCrc()) {
+        if (!force && isValidFile(soFile, soEntry)) {
             return;
         }
-        if (!soFile.delete()) {
+        if (soFile.exists() && !soFile.delete()) {
             throw new IOException("can not delete file " + soFile);
         }
         copy(apkFile.getInputStream(soEntry), soFile);
@@ -95,6 +95,13 @@ public class Extractor {
         }
     }
 
+    public static boolean isValidFile(File file, ZipEntry soEntry) throws IOException {
+        return isValidFile(file) && file.length() == soEntry.getSize() && getCrc(file) == soEntry.getCrc();
+    }
+
+    public static boolean isValidFile(File file) {
+        return file != null && file.exists() && file.isFile() && file.canRead() && file.canWrite();
+    }
 
     public static long getCrc(File file) throws IOException {
         InputStream inputStream = null;

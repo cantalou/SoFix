@@ -88,9 +88,9 @@ public class NativeLibraryDirectoriesCompat {
             Object nativeLibraryPathElements = getNativeLibraryPathElements(pathList);
             Object[] newPathElement = null;
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                newPathElement = (Object[]) invoke(pathList, "makePathElements", new Class[]{List.class, File.class, List.class}, Arrays.asList(nativeLibraryDir), null, new ArrayList<>());
-            } else {
                 newPathElement = (Object[]) invoke(pathList, "makePathElements", new Class[]{List.class}, Arrays.asList(nativeLibraryDir));
+            } else {
+                newPathElement = (Object[]) invoke(pathList, "makePathElements", new Class[]{List.class, File.class, List.class}, Arrays.asList(nativeLibraryDir), null, new ArrayList<>());
             }
             Object newInstance = expand(nativeLibraryPathElements, newPathElement[0]);
             setFieldValue(pathList, "nativeLibraryPathElements", newInstance);

@@ -15,7 +15,7 @@
 package com.wy.sofix.loader;
 
 /**
- * Except to use original caller classLoader
+ * Except the original caller classLoader to invoke load/loadLibrary method
  * @author cantalou
  * @date 2018-06-18 14:50
  */

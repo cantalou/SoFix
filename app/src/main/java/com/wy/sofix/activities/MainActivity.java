@@ -1,13 +1,13 @@
 package com.wy.sofix.activities;
 
-import android.support.v7.app.AppCompatActivity;
+import android.app.Activity;
 import android.os.Bundle;
 import android.widget.TextView;
 
 import com.wy.sofix.NativeLib;
 import com.wy.sofix.R;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
 
     static {
         System.loadLibrary("native-lib");

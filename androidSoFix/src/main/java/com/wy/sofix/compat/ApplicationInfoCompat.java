@@ -35,7 +35,6 @@ import java.util.zip.ZipFile;
 import static com.wy.sofix.SoFix.TAG;
 
 /**
- *
  * @author cantalou
  * @date 2018-06-18 14:34
  */
@@ -138,12 +137,16 @@ public class ApplicationInfoCompat {
                     Log.w(TAG, "getNativeLibraryDir: ", e);
                 }
             }
-        }else{
+        } else {
             if (BuildConfig.DEBUG) {
                 Log.d(TAG, "getNativeLibraryDir: " + nativeLibraryDir);
             }
         }
         return TextUtils.isEmpty(nativeLibraryDir) ? null : new File(nativeLibraryDir);
+    }
+
+    public static String getPrimaryCpuAbi(Context context) {
+        return getPrimaryCpuAbi(getApplicationInfo(context));
     }
 
     public static String getPrimaryCpuAbi(ApplicationInfo info) {
