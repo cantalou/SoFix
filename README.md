@@ -25,7 +25,8 @@ SoFix.loadLibrary(context, "nativeLibraryName");
 ```  
 if you want to load so with special classLoader
 ```
-//This will load native library with classLoader of SoLoader.class, default will load with with classLoader of SoFix.class 
+//This will load native library with classLoader of SoLoader.class, 
+//default is classLoader of SoFix.class 
 SoFix.loadLibrary(context, "test", new SoLoader() {
                 @Override
                 public void loadLibrary(String libName) {
