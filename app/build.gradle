@@ -4,7 +4,7 @@ android {
     compileSdkVersion 26
 
     defaultConfig {
-        applicationId "com.wy.sofix"
+        applicationId "com.wy.sofix.app"
         minSdkVersion 15
         targetSdkVersion 26
         versionCode 1
@@ -33,4 +33,5 @@ android {
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     testImplementation 'junit:junit:4.12'
+    implementation project(":androidSoFix")
 }
