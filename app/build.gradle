@@ -12,8 +12,9 @@ android {
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         ndk {
-            abiFilters 'x86', 'armeabi-v7a'
+            abiFilters 'x86', 'armeabi'
         }
+        buildConfigField "double", "forceBuild", new Random().nextDouble().toString()
     }
 
     buildTypes {
@@ -40,5 +41,5 @@ dependencies {
     androidTestImplementation('com.android.support.test.espresso:espresso-core:3.0.2'){
         exclude group :"com.android.support"
     }
-    implementation project(":androidSoFix")
+    implementation project(":library")
 }

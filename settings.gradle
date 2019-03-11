@@ -1,1 +1,1 @@
-include ':androidSoFix', ':app'
+include ':library', ':app'
