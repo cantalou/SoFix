@@ -81,7 +81,8 @@ public class ApplicationInfoCompat {
         PackageInfo packageInfo = getPackageInfoFromCodePath(context);
         if (packageInfo == null) {
             packageInfo = getPackageInfoFromPM(context);
-            //may null when throw exception(package manager has died)
+            //may null when throw exception "package manager has died"
+            //may null when throw exception "java.lang.NoSuchMethodError: com.android.internal.util.XmlUtils.skipSehrfntt!G"
         }
         return packageInfo;
     }
