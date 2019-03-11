@@ -17,18 +17,28 @@ package com.wy.sofix;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.wy.sofix.compat.ApplicationInfoCompat;
+import com.wy.sofix.compat.NativeLibraryDirectoriesCompat;
+import com.wy.sofix.loader.AsyncSoLoader;
+import com.wy.sofix.loader.SoLoadFailureException;
+import com.wy.sofix.loader.SoLoader;
+import com.wy.sofix.utils.IoUtil;
+
 import java.io.File;
 
+import java.io.FileFilter;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.zip.ZipFile;
 
 import static com.wy.sofix.Extractor.extract;
-import static com.wy.sofix.NativeLibraryDirectoriesFix.appendNativeLibraryDir;
-import static com.wy.sofix.NativeLibraryDirectoriesFix.containsNativeLibraryDir;
+import static com.wy.sofix.compat.NativeLibraryDirectoriesCompat.appendNativeLibraryDir;
+import static com.wy.sofix.compat.NativeLibraryDirectoriesCompat.containsNativeLibraryDir;
 
 
 /**
@@ -40,6 +50,8 @@ import static com.wy.sofix.NativeLibraryDirectoriesFix.containsNativeLibraryDir;
 public class SoFix {
 
     public static final String TAG = "SoFix";
+
+    private static final String libDirPrefix = "libCopy";
 
     /**
      * Load fo file from "soLoader" and reload if need
@@ -61,16 +73,68 @@ public class SoFix {
             throw new NullPointerException("Param soLoader was null");
         }
 
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.JELLY_BEAN_MR2) {
+            try {
+                NativeLibraryDirectoriesCompat.fixNativeLibraryDirectories(context);
+            } catch (Exception e) {
+                //ignore if it failed
+                //in some device below 4.3 may miss native library dir path in DexPathList's field named "nativeLibraryDirectories"
+            }
+        }
+
+        deleteRetainFile(context);
+
+        // we want to add the "fix dir" early for skipping "performLoad" method invoking when app starts in different process
+        File nativeLibraryDir = generateNativeLibraryDir(context);
+        if (nativeLibraryDir.exists()) {
+            try {
+                ClassLoader classLoader = soLoader.getClass()
+                                                  .getClassLoader();
+                NativeLibraryDirectoriesCompat.appendNativeLibraryDir(classLoader, nativeLibraryDir);
+            } catch (Exception e) {
+                //ignore if we can not add version dir
+            }
+        }
+
         try {
             soLoader.loadLibrary(libName);
         } catch (UnsatisfiedLinkError error) {
             if (BuildConfig.DEBUG) {
                 Log.w(TAG, "loadLibrary: ", error);
             }
-            performReload(context, libName, soLoader);
+            performLoad(context, libName, soLoader);
         }
     }
 
+    /**
+     * Delete the remaining file was extracted in previous version
+     *
+     * @param context
+     */
+    private static void deleteRetainFile(Context context) {
+        final String currentVersion = Integer.toString(ApplicationInfoCompat.getVersionCode(context));
+        File filesDir = context.getFilesDir();
+        File[] files = filesDir.listFiles(new FileFilter() {
+            @Override
+            public boolean accept(File file) {
+                String name = file.getName();
+                return name.startsWith(libDirPrefix) && !name.endsWith(currentVersion) && file.isDirectory();
+            }
+        });
+        if (files == null || files.length == 0) {
+            return;
+        }
+
+        for (File file : files) {
+            File[] subFiles = file.listFiles();
+            if (subFiles == null) {
+                continue;
+            }
+            for (File subFile : subFiles) {
+                subFile.delete();
+            }
+        }
+    }
 
     public static void loadLibrary(final Context context, final String libName, final AsyncSoLoader soLoader) throws SoLoadFailureException {
         new AsyncTask<Void, Void, Throwable>() {
@@ -78,7 +142,7 @@ public class SoFix {
             protected Throwable doInBackground(Void... voids) {
                 try {
                     loadLibrary(context, libName, soLoader);
-                } catch (Throwable e) {
+                } catch (SoLoadFailureException e) {
                     return e;
                 }
                 return null;
@@ -118,16 +182,16 @@ public class SoFix {
      * @param soLoader
      * @throws SoLoadFailureException
      */
-    public static void performReload(Context context, String libName, SoLoader soLoader) throws SoLoadFailureException {
+    public static void performLoad(Context context, String libName, SoLoader soLoader) throws SoLoadFailureException {
 
         String soFileName = System.mapLibraryName(libName);
-
         ArrayList<String> soFileNames = new ArrayList<>();
         soFileNames.add(soFileName);
 
-        ApplicationInfo applicationInfo = ApplicationInfoCompat.getApplicationInfo(context);
-
-        File nativeLibraryDir = ApplicationInfoCompat.getNativeLibraryDir(applicationInfo);
+        File nativeLibraryDir = generateNativeLibraryDir(context);
+        if (!nativeLibraryDir.exists()) {
+            nativeLibraryDir.mkdir();
+        }
 
         ClassLoader classLoader = soLoader.getClass()
                                           .getClassLoader();
@@ -135,9 +199,12 @@ public class SoFix {
         File apkFile = new File(context.getPackageCodePath());
         ZipFile apkZipFile = null;
         try {
-            apkZipFile = IoUtil.getZipFile(apkFile);
-            String arch = ApplicationInfoCompat.getAbi(context.getPackageCodePath(), apkZipFile, soFileName);
-            performReload(apkZipFile, libName, classLoader, nativeLibraryDir, arch, soFileNames, soLoader);
+            apkZipFile = IoUtil.getZipFileWithRetry(apkFile);
+            String arch = ApplicationInfoCompat.getPrimaryCpuAbi(context);
+            if (TextUtils.isEmpty(arch)) {
+                arch = ApplicationInfoCompat.getAbi(context.getPackageCodePath(), apkZipFile, soFileName);
+            }
+            performLoad(apkZipFile, libName, classLoader, nativeLibraryDir, arch, soFileNames, soLoader);
         } catch (Throwable e) {
             throw new SoLoadFailureException(e);
         } finally {
@@ -145,23 +212,25 @@ public class SoFix {
         }
     }
 
-    public static void performReload(ZipFile apkZipFile, String library, ClassLoader cl, File nativeLibraryDir, String arch, ArrayList<String> soFileNames, SoLoader soLoader) throws IllegalAccessException, NoSuchFieldException, IOException {
+    private static File generateNativeLibraryDir(Context context) {
+        return new File(context.getFilesDir(), libDirPrefix + ApplicationInfoCompat.getVersionCode(context));
+    }
 
+    public static void performLoad(ZipFile apkZipFile, String library, ClassLoader cl, File nativeLibraryDir, String arch, ArrayList<String> soFileNames, SoLoader soLoader) throws IllegalAccessException, NoSuchFieldException, IOException, NoSuchMethodException, InvocationTargetException {
         if (!containsNativeLibraryDir(cl, nativeLibraryDir)) {
             appendNativeLibraryDir(cl, nativeLibraryDir);
         }
-
         try {
-            reload(apkZipFile, library, nativeLibraryDir, arch, soFileNames, soLoader, false);
+            load(apkZipFile, library, nativeLibraryDir, arch, soFileNames, soLoader, false);
         } catch (UnsatisfiedLinkError e) {
             if (BuildConfig.DEBUG) {
                 Log.w(TAG, "reload: ", e);
             }
-            reload(apkZipFile, library, nativeLibraryDir, arch, soFileNames, soLoader, true);
+            load(apkZipFile, library, nativeLibraryDir, arch, soFileNames, soLoader, true);
         }
     }
 
-    private static void reload(ZipFile apkZipFile, String library, File nativeLibraryDir, String arch, ArrayList<String> soFileNames, SoLoader soLoader, boolean force) throws IOException {
+    private static void load(ZipFile apkZipFile, String library, File nativeLibraryDir, String arch, ArrayList<String> soFileNames, SoLoader soLoader, boolean force) throws IOException {
         try {
             extract(apkZipFile, arch, nativeLibraryDir, soFileNames, force);
             soLoader.loadLibrary(library);

@@ -2,18 +2,30 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 26
+
     defaultConfig {
-        applicationId "com.wy.sofix"
+        applicationId "com.wy.sofix.app"
         minSdkVersion 15
         targetSdkVersion 26
         versionCode 1
         versionName "1.0"
+
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        ndk {
+            abiFilters 'x86', 'armeabi-v7a'
+        }
     }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path 'CMakeLists.txt'
         }
     }
 }
@@ -28,4 +40,5 @@ dependencies {
     androidTestImplementation('com.android.support.test.espresso:espresso-core:3.0.2'){
         exclude group :"com.android.support"
     }
+    implementation project(":androidSoFix")
 }
