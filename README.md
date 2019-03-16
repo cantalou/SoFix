@@ -40,4 +40,4 @@ SoFix.loadLibrary(context, "test", new SoLoader() {
 ```
 
 # Test cover
-1. Android version : from 4.0 - 9.0
+1. Android version : from 4.1 - 9.0
