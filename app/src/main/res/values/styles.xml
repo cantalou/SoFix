@@ -3,5 +3,5 @@
     <!-- Base application theme. -->
     <style name="AppTheme" parent="android:Theme.NoTitleBar">
     </style>
-
+    <string name="app_name">SoFix</string>
 </resources>

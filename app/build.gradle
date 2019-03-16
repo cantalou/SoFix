@@ -42,4 +42,5 @@ dependencies {
         exclude group :"com.android.support"
     }
     implementation project(":library")
+    implementation 'com.chrisplus.rootmanager:library:2.0.4@aar'
 }
