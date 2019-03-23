@@ -35,9 +35,19 @@ public class ReflectUtil {
         field.set(instance, value);
     }
 
+    public static void setFieldValue(Class clazz, String fieldName, Object value) throws NoSuchFieldException, IllegalAccessException {
+        Field field = findField(clazz, fieldName);
+        field.set(null, value);
+    }
+
     public static Object getFieldValue(Object instance, String fieldName) throws NoSuchFieldException, IllegalAccessException {
         Field field = findField(instance, fieldName);
         return field.get(instance);
+    }
+
+    public static Object getFieldValue(Class clazz, String fieldName) throws NoSuchFieldException, IllegalAccessException {
+        Field field = findField(clazz, fieldName);
+        return field.get(null);
     }
 
     public static Object invoke(Object instance, String name, Class<?>[] paramTypes, Object... params) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException {
@@ -51,7 +61,7 @@ public class ReflectUtil {
             } else if (params != null && params.length > 0) {
                 for (Object param : params) {
                     key ^= param.getClass()
-                                .hashCode();
+                            .hashCode();
                 }
             }
 
@@ -130,7 +140,19 @@ public class ReflectUtil {
      * @throws NoSuchFieldException if the field cannot be located
      */
     public static Field findField(Object instance, String name) throws NoSuchFieldException {
-        for (Class<?> clazz = instance.getClass(); clazz != null; clazz = clazz.getSuperclass()) {
+        return findField(instance.getClass(), name);
+    }
+
+    /**
+     * Locates a given field anywhere in the class inheritance hierarchy.
+     *
+     * @param clazz an clazz to search the field into.
+     * @param name     field name
+     * @return a field object
+     * @throws NoSuchFieldException if the field cannot be located
+     */
+    public static Field findField(Class clazz, String name) throws NoSuchFieldException {
+        for (; clazz != null; clazz = clazz.getSuperclass()) {
             int key = clazz.hashCode() ^ name.hashCode();
             Field field = fieldCache.get(key);
             if (field != null && name.equals(field.getName())) {
@@ -159,6 +181,6 @@ public class ReflectUtil {
                 // ignore and search next
             }
         }
-        throw new NoSuchFieldException("Field " + name + " not found in " + instance.getClass() + " and super class");
+        throw new NoSuchFieldException("Field " + name + " not found in " + clazz + " and super class");
     }
 }

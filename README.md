@@ -38,3 +38,6 @@ SoFix.loadLibrary(context, "test", new SoLoader() {
                 }
             });
 ```
+
+# Test cover
+1. Android version : from 4.1 - 9.0

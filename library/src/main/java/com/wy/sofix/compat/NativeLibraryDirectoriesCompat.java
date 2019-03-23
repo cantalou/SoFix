@@ -71,7 +71,7 @@ public class NativeLibraryDirectoriesCompat {
         }
 
         if (nativeLibraryDir == null || !nativeLibraryDir.exists() || nativeLibraryDir.isFile()) {
-            throw new IllegalArgumentException("file nativeLibraryDir:" + nativeLibraryDir + " must exist and type is directory");
+            throw new IllegalArgumentException("file nativeLibraryDir:" + nativeLibraryDir + " must be directory and exist");
         }
 
         if (containsNativeLibraryDir(classLoader, nativeLibraryDir)) {

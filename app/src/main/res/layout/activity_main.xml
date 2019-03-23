@@ -5,12 +5,26 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".activities.MainActivity">
+    tools:context=".activities.MainActivity"
+    android:orientation="vertical">
 
     <TextView
         android:id="@+id/text_content"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:textSize="20sp"/>
+        android:layout_height="wrap_content"
+        android:textSize="20sp"
+        android:text="so load result"/>
+
+    <Button
+        android:layout_width="250dp"
+        android:layout_height="50dp"
+        android:text="load"
+        android:onClick="loadLib"/>
+
+    <Button
+        android:layout_width="250dp"
+        android:layout_height="50dp"
+        android:text="repair"
+        android:onClick="repair"/>
 
 </LinearLayout>

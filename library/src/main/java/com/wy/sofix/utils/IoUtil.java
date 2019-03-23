@@ -83,7 +83,7 @@ public class IoUtil {
      * @param closeables
      */
     public static void closeSilent(ZipFile... closeables) {
-        for (Closeable closeable : closeables) {
+        for (ZipFile closeable : closeables) {
             if (closeable != null) {
                 try {
                     closeable.close();

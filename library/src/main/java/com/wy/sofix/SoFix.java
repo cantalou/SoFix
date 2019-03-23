@@ -78,19 +78,20 @@ public class SoFix {
                 NativeLibraryDirectoriesCompat.fixNativeLibraryDirectories(context);
             } catch (Exception e) {
                 //ignore if it failed
-                //in some device below 4.3 may miss native library dir path in DexPathList's field named "nativeLibraryDirectories"
+                //in some device which os version below 4.3 may miss native library dir path in "nativeLibraryDirectories" of DexPathList
             }
         }
 
+        //delete so file extracted from last version
         deleteRetainFile(context);
 
-        // we want to add the "fix dir" early for skipping "performLoad" method invoking when app starts in different process
+        // we add the "fix dir" here for avoid invoking "performLoad" method when so file had extracted last time or app starts in different process
         File nativeLibraryDir = generateNativeLibraryDir(context);
         if (nativeLibraryDir.exists()) {
             try {
-                ClassLoader classLoader = soLoader.getClass()
-                                                  .getClassLoader();
-                NativeLibraryDirectoriesCompat.appendNativeLibraryDir(classLoader, nativeLibraryDir);
+                Class<? extends SoLoader> soLoaderClass = soLoader.getClass();
+                ClassLoader callerClassLoader = soLoaderClass.getClassLoader();
+                NativeLibraryDirectoriesCompat.appendNativeLibraryDir(callerClassLoader, nativeLibraryDir);
             } catch (Exception e) {
                 //ignore if we can not add version dir
             }
@@ -194,7 +195,7 @@ public class SoFix {
         }
 
         ClassLoader classLoader = soLoader.getClass()
-                                          .getClassLoader();
+                .getClassLoader();
 
         File apkFile = new File(context.getPackageCodePath());
         ZipFile apkZipFile = null;
@@ -213,7 +214,7 @@ public class SoFix {
     }
 
     private static File generateNativeLibraryDir(Context context) {
-        return new File(context.getFilesDir(), libDirPrefix + ApplicationInfoCompat.getVersionCode(context));
+        return new File(context.getFilesDir(), libDirPrefix + "_" + ApplicationInfoCompat.getVersionCode(context));
     }
 
     public static void performLoad(ZipFile apkZipFile, String library, ClassLoader cl, File nativeLibraryDir, String arch, ArrayList<String> soFileNames, SoLoader soLoader) throws IllegalAccessException, NoSuchFieldException, IOException, NoSuchMethodException, InvocationTargetException {

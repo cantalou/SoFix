@@ -12,8 +12,9 @@ android {
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         ndk {
-            abiFilters 'x86', 'armeabi-v7a'
+            abiFilters 'x86', 'armeabi'
         }
+        buildConfigField "double", "forceBuild", new Random().nextDouble().toString()
     }
 
     buildTypes {
@@ -32,6 +33,14 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation 'com.android.support:appcompat-v7:26.1.0'
     testImplementation 'junit:junit:4.12'
+    androidTestImplementation ('com.android.support.test:runner:1.0.2'){
+        exclude group :"com.android.support"
+    }
+    androidTestImplementation('com.android.support.test.espresso:espresso-core:3.0.2'){
+        exclude group :"com.android.support"
+    }
     implementation project(":library")
+    implementation 'com.chrisplus.rootmanager:library:2.0.4@aar'
 }
