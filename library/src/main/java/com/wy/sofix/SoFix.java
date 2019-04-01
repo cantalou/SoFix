@@ -59,7 +59,7 @@ public class SoFix {
      * @param libName  the name of the library
      * @param soLoader load so file with original caller classLoader
      */
-    public static void loadLibrary(Context context, String libName, SoLoader soLoader) throws SoLoadFailureException {
+    public static void loadLibrary(Context context, String apkFilePath, String libName, SoLoader soLoader) throws SoLoadFailureException {
 
         if (context == null) {
             throw new NullPointerException("Param context was null");
@@ -103,7 +103,7 @@ public class SoFix {
             if (BuildConfig.DEBUG) {
                 Log.w(TAG, "loadLibrary: ", error);
             }
-            performLoad(context, libName, soLoader);
+            performLoad(context, apkFilePath, libName, soLoader);
         }
     }
 
@@ -161,10 +161,10 @@ public class SoFix {
     }
 
     /**
-     * @see SoFix#loadLibrary(Context, String, SoLoader)
+     * @see SoFix#loadLibrary(Context, String, String, SoLoader)
      */
     public static void loadLibrary(Context context, String libName) throws SoLoadFailureException {
-        loadLibrary(context, libName, new SoLoader() {
+        loadLibrary(context, context.getPackageCodePath(), libName, new SoLoader() {
             @Override
             public void loadLibrary(String libName) {
                 System.loadLibrary(libName);
@@ -183,8 +183,7 @@ public class SoFix {
      * @param soLoader
      * @throws SoLoadFailureException
      */
-    public static void performLoad(Context context, String libName, SoLoader soLoader) throws SoLoadFailureException {
-
+    public static void performLoad(Context context, String apkFilePath, String libName, SoLoader soLoader) throws SoLoadFailureException {
         String soFileName = System.mapLibraryName(libName);
         ArrayList<String> soFileNames = new ArrayList<>();
         soFileNames.add(soFileName);
@@ -197,13 +196,13 @@ public class SoFix {
         ClassLoader classLoader = soLoader.getClass()
                 .getClassLoader();
 
-        File apkFile = new File(context.getPackageCodePath());
+        File apkFile = new File(apkFilePath);
         ZipFile apkZipFile = null;
         try {
             apkZipFile = IoUtil.getZipFileWithRetry(apkFile);
             String arch = ApplicationInfoCompat.getPrimaryCpuAbi(context);
             if (TextUtils.isEmpty(arch)) {
-                arch = ApplicationInfoCompat.getAbi(context.getPackageCodePath(), apkZipFile, soFileName);
+                arch = ApplicationInfoCompat.getAbi(apkFilePath, apkZipFile, soFileName);
             }
             performLoad(apkZipFile, libName, classLoader, nativeLibraryDir, arch, soFileNames, soLoader);
         } catch (Throwable e) {
