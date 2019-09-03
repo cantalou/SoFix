@@ -15,7 +15,7 @@ We may meet below errors when we use System.loadLibrary() to load native library
 ```
 dependencies{
 ...
-compile 'com.cantalou:androidSoFix:1.0.0'
+compile 'com.cantalou:androidSoFix:1.0.2'
 }
 
 ```
